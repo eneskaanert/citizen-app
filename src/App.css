@@ -1,0 +1,1247 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Arial,
+    sans-serif;
+
+  background: #f4f6f8;
+  color: #172033;
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* =====================================================
+   GENEL
+===================================================== */
+
+.citizen-app {
+  width: 100%;
+  min-height: 100vh;
+
+  background: #f4f6f8;
+
+  padding-bottom: 86px;
+}
+
+.citizen-content {
+  width: 100%;
+  max-width: 680px;
+
+  margin: 0 auto;
+
+  padding: 18px 16px 30px;
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.citizen-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 72px;
+
+  padding: 13px 18px;
+
+  background: rgba(255, 255, 255, 0.95);
+
+  border-bottom: 1px solid #e7eaf0;
+
+  backdrop-filter: blur(18px);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;
+  height: 40px;
+
+  border-radius: 12px;
+
+  background: #e53935;
+  color: white;
+
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+
+.brand-name {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.brand-user {
+  margin-top: 2px;
+
+  color: #8993a3;
+
+  font-size: 11px;
+}
+
+.system-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 7px 9px;
+
+  border-radius: 10px;
+
+  background: #f0f2f5;
+
+  color: #7f8997;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.system-status span {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #aeb6c2;
+}
+
+.system-status.connected {
+  background: #edf8f2;
+  color: #28754c;
+}
+
+.system-status.connected span {
+  background: #2ca56b;
+}
+
+/* =====================================================
+   HERO
+===================================================== */
+
+.hero-card {
+  position: relative;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 175px;
+
+  margin-bottom: 25px;
+  padding: 24px 22px;
+
+  border-radius: 24px;
+
+  background: #172033;
+  color: white;
+
+  box-shadow:
+    0 12px 30px rgba(23, 32, 51, 0.14);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+
+  max-width: 390px;
+}
+
+.hero-eyebrow {
+  margin-bottom: 9px;
+
+  color: #ff8a86;
+
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.7px;
+}
+
+.hero-card h1 {
+  margin: 0 0 9px;
+
+  font-size: 27px;
+  line-height: 1.08;
+  letter-spacing: -0.7px;
+}
+
+.hero-card p {
+  max-width: 330px;
+
+  margin: 0;
+
+  color: #d3d8e1;
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.hero-shape {
+  position: absolute;
+  right: -20px;
+  bottom: -40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 140px;
+  height: 140px;
+
+  border: 24px solid rgba(255, 255, 255, 0.05);
+
+  border-radius: 50%;
+
+  color: rgba(255, 255, 255, 0.12);
+
+  font-size: 65px;
+  font-weight: 900;
+}
+
+/* =====================================================
+   SECTION
+===================================================== */
+
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  margin: 0 3px 12px;
+}
+
+.section-heading span,
+.page-title > span,
+.emergency-title > span {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color: #e53935;
+
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.6px;
+}
+
+.section-heading h2 {
+  margin: 0;
+
+  font-size: 19px;
+  line-height: 1.1;
+}
+
+.location-heading {
+  margin-top: 27px;
+}
+
+.refresh-location {
+  border: 0;
+
+  padding: 6px 0;
+
+  background: transparent;
+
+  color: #e53935;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+/* =====================================================
+   ACİL EKİPLERİ
+===================================================== */
+
+.emergency-grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 9px;
+}
+
+.emergency-card {
+  min-width: 0;
+
+  padding: 13px;
+
+  border: 1px solid #e1e5ea;
+  border-radius: 19px;
+
+  background: white;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.emergency-card:active {
+  transform: scale(0.97);
+}
+
+.emergency-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.emergency-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 43px;
+  height: 43px;
+
+  border-radius: 13px;
+
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.emergency-arrow {
+  color: #b3bac4;
+  font-size: 17px;
+}
+
+.emergency-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  margin-top: 17px;
+}
+
+.emergency-info strong {
+  font-size: 14px;
+}
+
+.emergency-info span {
+  min-height: 30px;
+
+  color: #8b94a2;
+
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.emergency-card.ambulance
+  .emergency-icon {
+  background: #fff0f0;
+  color: #d83232;
+}
+
+.emergency-card.police
+  .emergency-icon {
+  background: #edf3ff;
+  color: #315ca8;
+}
+
+.emergency-card.fire
+  .emergency-icon {
+  background: #fff2e8;
+  color: #e36a20;
+}
+
+/* =====================================================
+   GÜVENLİK NOTU
+===================================================== */
+
+.safety-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin-top: 11px;
+  padding: 11px 12px;
+
+  border-radius: 14px;
+
+  background: #fffaf0;
+  border: 1px solid #f3e7c8;
+}
+
+.safety-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 25px;
+  height: 25px;
+
+  flex: 0 0 25px;
+
+  border-radius: 50%;
+
+  background: #f2d98e;
+  color: #6e5515;
+
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.safety-note div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.safety-note strong {
+  color: #66521d;
+  font-size: 10px;
+}
+
+.safety-note span {
+  color: #8b7844;
+  font-size: 9px;
+}
+
+/* =====================================================
+   HARİTA
+===================================================== */
+
+.map-card {
+  overflow: hidden;
+
+  border: 1px solid #e1e5ea;
+  border-radius: 21px;
+
+  background: white;
+
+  box-shadow:
+    0 5px 20px rgba(23, 32, 51, 0.04);
+}
+
+.map-card .leaflet-container {
+  width: 100%;
+  height: 215px;
+}
+
+.map-bottom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 13px 14px;
+}
+
+.map-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 31px;
+  height: 31px;
+
+  border-radius: 10px;
+
+  background: #edf8f2;
+  color: #2ca56b;
+
+  font-size: 10px;
+}
+
+.map-status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.map-status-text strong {
+  font-size: 12px;
+}
+
+.map-status-text span {
+  color: #8c95a2;
+  font-size: 10px;
+}
+
+.citizen-location-marker {
+  background: transparent;
+  border: 0;
+}
+
+.location-marker-core {
+  width: 24px;
+  height: 24px;
+
+  border: 5px solid white;
+  border-radius: 50%;
+
+  background: #e53935;
+
+  box-shadow:
+    0 2px 9px rgba(0, 0, 0, 0.28),
+    0 0 0 7px rgba(229, 57, 53, 0.18);
+}
+
+/* =====================================================
+   OFFLINE
+===================================================== */
+
+.offline-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  margin-top: 11px;
+  padding: 12px 13px;
+
+  border: 1px solid #f1dfae;
+  border-radius: 15px;
+
+  background: #fff9e9;
+}
+
+.offline-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 31px;
+  height: 31px;
+
+  border-radius: 9px;
+
+  background: #f1d887;
+  color: #675118;
+
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.offline-card div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.offline-card strong {
+  color: #68551f;
+  font-size: 11px;
+}
+
+.offline-card span {
+  color: #897543;
+  font-size: 9px;
+}
+
+.message-box {
+  margin-top: 11px;
+  padding: 12px 13px;
+
+  border-radius: 14px;
+
+  background: #edf8f2;
+  color: #28754c;
+
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* =====================================================
+   ACİL DURUM SAYFASI
+===================================================== */
+
+.emergency-page {
+  padding-top: 2px;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  border: 0;
+  padding: 5px 0;
+
+  background: transparent;
+
+  color: #626d7d;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.back-button span {
+  font-size: 17px;
+}
+
+.emergency-title {
+  margin: 27px 2px 20px;
+}
+
+.emergency-title h1 {
+  margin: 0 0 7px;
+
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -0.7px;
+}
+
+.emergency-title p {
+  margin: 0;
+
+  color: #7f8997;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.selected-emergency {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  padding: 12px;
+
+  margin-bottom: 22px;
+
+  border: 1px solid #e1e5ea;
+  border-radius: 17px;
+
+  background: white;
+}
+
+.selected-emergency-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 44px;
+  height: 44px;
+
+  border-radius: 13px;
+
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.selected-emergency.ambulance
+  .selected-emergency-icon {
+  background: #fff0f0;
+  color: #d83232;
+}
+
+.selected-emergency.police
+  .selected-emergency-icon {
+  background: #edf3ff;
+  color: #315ca8;
+}
+
+.selected-emergency.fire
+  .selected-emergency-icon {
+  background: #fff2e8;
+  color: #e36a20;
+}
+
+.selected-emergency div:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  flex: 1;
+}
+
+.selected-emergency div:nth-child(2) span {
+  color: #8d96a3;
+  font-size: 9px;
+}
+
+.selected-emergency div:nth-child(2) strong {
+  font-size: 14px;
+}
+
+.selected-emergency button {
+  border: 0;
+
+  background: transparent;
+
+  color: #e53935;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.description-block {
+  position: relative;
+}
+
+.description-block label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.description-block textarea {
+  display: block;
+
+  width: 100%;
+  min-height: 155px;
+
+  padding: 14px 14px 30px;
+
+  border: 1px solid #dfe4ea;
+  border-radius: 17px;
+
+  outline: none;
+  resize: vertical;
+
+  background: white;
+  color: #172033;
+
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.description-block textarea::placeholder {
+  color: #adb4be;
+}
+
+.description-block textarea:focus {
+  border-color: #e53935;
+
+  box-shadow:
+    0 0 0 3px rgba(229, 57, 53, 0.08);
+}
+
+.character-count {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+
+  color: #a1a8b2;
+
+  font-size: 9px;
+}
+
+.emergency-location-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin-top: 11px;
+  padding: 12px;
+
+  border: 1px solid #e1e5ea;
+  border-radius: 15px;
+
+  background: white;
+}
+
+.emergency-location-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 31px;
+  height: 31px;
+
+  border-radius: 10px;
+
+  background: #edf8f2;
+  color: #2ca56b;
+
+  font-size: 9px;
+}
+
+.emergency-location-card div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.emergency-location-card strong {
+  font-size: 11px;
+}
+
+.emergency-location-card span {
+  color: #8d96a3;
+  font-size: 9px;
+}
+
+.send-emergency-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+
+  width: 100%;
+
+  margin-top: 17px;
+  padding: 17px;
+
+  border: 0;
+  border-radius: 16px;
+
+  background: #e53935;
+  color: white;
+
+  font-size: 13px;
+  font-weight: 900;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 9px 22px rgba(229, 57, 53, 0.22);
+}
+
+.send-emergency-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.send-arrow {
+  font-size: 18px;
+}
+
+.emergency-disclaimer {
+  margin: 9px 16px 0;
+
+  color: #9ca4ae;
+
+  text-align: center;
+
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+/* =====================================================
+   SAYFA BAŞLIKLARI
+===================================================== */
+
+.page-title {
+  margin: 7px 2px 23px;
+}
+
+.page-title h1 {
+  margin: 0 0 6px;
+
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -0.7px;
+}
+
+.page-title p {
+  margin: 0;
+
+  color: #858f9d;
+
+  font-size: 12px;
+}
+
+/* =====================================================
+   GEÇMİŞ
+===================================================== */
+
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.report-card {
+  padding: 14px;
+
+  border: 1px solid #e1e5ea;
+  border-radius: 17px;
+
+  background: white;
+}
+
+.report-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.report-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;
+  height: 40px;
+
+  flex: 0 0 40px;
+
+  border-radius: 12px;
+
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.report-type-icon.fire {
+  background: #fff2e8;
+  color: #e36a20;
+}
+
+.report-type-icon.police {
+  background: #edf3ff;
+  color: #315ca8;
+}
+
+.report-type-icon.ambulance {
+  background: #fff0f0;
+  color: #d83232;
+}
+
+.report-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  flex: 1;
+}
+
+.report-card-title strong {
+  font-size: 12px;
+}
+
+.report-card-title span {
+  color: #9aa2ad;
+  font-size: 9px;
+}
+
+.report-status {
+  padding: 5px 7px;
+
+  border-radius: 7px;
+
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.report-status.new {
+  background: #edf8f2;
+  color: #28754c;
+}
+
+.report-status.waiting {
+  background: #fff7df;
+  color: #80671e;
+}
+
+.report-card > p {
+  margin: 12px 0 0;
+
+  color: #596474;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* =====================================================
+   EMPTY
+===================================================== */
+
+.empty-state {
+  padding: 48px 25px;
+
+  border-radius: 20px;
+
+  background: white;
+
+  text-align: center;
+}
+
+.empty-icon {
+  color: #c0c6ce;
+
+  font-size: 28px;
+}
+
+.empty-state h3 {
+  margin: 11px 0 5px;
+
+  font-size: 15px;
+}
+
+.empty-state p {
+  max-width: 260px;
+
+  margin: 0 auto;
+
+  color: #8d96a3;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* =====================================================
+   PROFİL
+===================================================== */
+
+.profile-card {
+  padding: 25px 18px;
+
+  border: 1px solid #e1e5ea;
+  border-radius: 21px;
+
+  background: white;
+
+  text-align: center;
+}
+
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 68px;
+  height: 68px;
+
+  margin: 0 auto 12px;
+
+  border-radius: 50%;
+
+  background: #172033;
+  color: white;
+
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.profile-card h2 {
+  margin: 0 0 4px;
+
+  font-size: 18px;
+}
+
+.profile-role {
+  color: #8c95a2;
+  font-size: 10px;
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+
+  margin-top: 23px;
+
+  border-top: 1px solid #edf0f3;
+}
+
+.profile-details div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+
+  padding: 12px 2px;
+
+  border-bottom: 1px solid #edf0f3;
+}
+
+.profile-details span {
+  color: #8d96a3;
+  font-size: 9px;
+}
+
+.profile-details strong {
+  max-width: 100%;
+
+  font-size: 11px;
+
+  word-break: break-word;
+}
+
+.logout-button {
+  width: 100%;
+
+  margin-top: 12px;
+  padding: 14px;
+
+  border: 1px solid #e2e5ea;
+  border-radius: 15px;
+
+  background: white;
+  color: #c62828;
+
+  font-size: 11px;
+  font-weight: 900;
+
+  cursor: pointer;
+}
+
+/* =====================================================
+   ALT MENÜ
+===================================================== */
+
+.bottom-navigation {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3000;
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  height: 70px;
+
+  padding-bottom: env(
+    safe-area-inset-bottom
+  );
+
+  background: rgba(255, 255, 255, 0.96);
+
+  border-top: 1px solid #e4e7eb;
+
+  backdrop-filter: blur(18px);
+}
+
+.bottom-navigation button {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 4px;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #9aa2ad;
+
+  cursor: pointer;
+}
+
+.bottom-navigation button.active {
+  color: #e53935;
+}
+
+.bottom-navigation button.active::before {
+  content: "";
+
+  position: absolute;
+  top: 0;
+
+  width: 28px;
+  height: 3px;
+
+  border-radius: 0 0 4px 4px;
+
+  background: #e53935;
+}
+
+.nav-icon {
+  font-size: 21px;
+  line-height: 1;
+}
+
+.bottom-navigation small {
+  font-size: 9px;
+  font-weight: 800;
+}
+
+/* =====================================================
+   TELEFON
+===================================================== */
+
+@media (max-width: 390px) {
+  .citizen-content {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .citizen-header {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .hero-card {
+    min-height: 165px;
+    padding: 21px 19px;
+  }
+
+  .hero-card h1 {
+    font-size: 24px;
+  }
+
+  .emergency-grid {
+    gap: 7px;
+  }
+
+  .emergency-card {
+    padding: 11px;
+    border-radius: 16px;
+  }
+
+  .emergency-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+
+  .emergency-info strong {
+    font-size: 12px;
+  }
+
+  .emergency-info span {
+    font-size: 8px;
+  }
+}
+
+@media (min-width: 700px) {
+  .citizen-content {
+    padding-top: 28px;
+  }
+
+  .hero-card {
+    min-height: 205px;
+  }
+}
