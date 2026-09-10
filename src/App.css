@@ -1245,3 +1245,37 @@ button {
     min-height: 205px;
   }
 }
+
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+  height: auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+body {
+  overflow-y: auto !important;
+}
+
+#root {
+  overflow: visible !important;
+}
+
+.citizen-app {
+  width: 100%;
+  min-height: 100vh;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.citizen-content {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  padding-bottom: 100px !important;
+}

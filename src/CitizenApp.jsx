@@ -10,7 +10,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./App.css";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://acil-durum-ai.onrender.com";
 const DEFAULT_CENTER = [41.0082, 28.9784];
 
 const emergencyTypes = [
@@ -198,7 +198,7 @@ function CitizenApp() {
   async function checkBackend() {
     try {
       const response = await fetch(
-        `${API_URL}/`
+        `${API_URL}/health`
       );
 
       setBackendOnline(response.ok);
@@ -206,7 +206,7 @@ function CitizenApp() {
       setBackendOnline(false);
     }
   }
-
+  
   // =========================================================
   // LOCATION
   // =========================================================

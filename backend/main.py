@@ -1,18 +1,13 @@
 from datetime import datetime
 from typing import Optional
-from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 
-# =========================================================
-# APP
-# =========================================================
-
 app = FastAPI(
-    title="Acil Durum AI API",
+    title="Acil Durum AI Backend",
     version="1.0.0",
 )
 
@@ -28,8 +23,6 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
-
-        # LAN üzerinden telefon bağlantısı
         "http://192.168.31.8:5173",
         "http://192.168.31.8:5174",
     ],
@@ -40,14 +33,14 @@ app.add_middleware(
 
 
 # =========================================================
-# MEMORY DATABASE
+# VERİLER
 # =========================================================
 
 emergencies = []
 
 
 # =========================================================
-# MODELS
+# MODELLER
 # =========================================================
 
 class AnalyzeRequest(BaseModel):
@@ -84,7 +77,7 @@ class AssignTeamRequest(BaseModel):
 
 
 # =========================================================
-# AI KEYWORDS
+# AI ANAHTAR KELİMELER
 # =========================================================
 
 FIRE_WORDS = [
@@ -141,263 +134,189 @@ DISASTER_WORDS = [
 
 
 # =========================================================
-# AI ANALYSIS
+# YARDIMCI FONKSİYONLAR
 # =========================================================
 
-def analyze_text(message: str):
-    text = message.lower().strip()
+def analyze_text(text: str):
+    text_lower = text.lower()
 
     detected = []
 
     for word in FIRE_WORDS:
-        if word in text:
+        if word in text_lower:
             detected.append(word)
 
-    for word in MEDICAL_WORDS:
-        if word in text:
-            detected.append(word)
-
-    for word in POLICE_WORDS:
-        if word in text:
-            detected.append(word)
-
-    for word in ACCIDENT_WORDS:
-        if word in text:
-            detected.append(word)
-
-    for word in DISASTER_WORDS:
-        if word in text:
-            detected.append(word)
-
-    # YANGIN
-    if any(word in text for word in FIRE_WORDS):
+    if detected:
         return {
             "type": "YANGIN",
             "priority": "KRİTİK",
             "confidence": 95,
             "detected_keywords": detected,
-            "suggestion": (
-                "Yangın belirtileri tespit edildi. "
-                "İtfaiye müdahalesi öncelikli olmalıdır."
-            ),
+            "suggestion": "İtfaiye ekibi yönlendirilmesi önerilir.",
         }
 
-    # SAĞLIK
-    if any(word in text for word in MEDICAL_WORDS):
+    detected = []
+
+    for word in MEDICAL_WORDS:
+        if word in text_lower:
+            detected.append(word)
+
+    if detected:
         return {
             "type": "SAĞLIK",
             "priority": "YÜKSEK",
             "confidence": 92,
             "detected_keywords": detected,
-            "suggestion": (
-                "Sağlıkla ilgili acil durum belirtileri "
-                "tespit edildi. Ambulans desteği önceliklidir."
-            ),
+            "suggestion": "Sağlık/ambulans ekibi yönlendirilmesi önerilir.",
         }
 
-    # GÜVENLİK
-    if any(word in text for word in POLICE_WORDS):
+    detected = []
+
+    for word in POLICE_WORDS:
+        if word in text_lower:
+            detected.append(word)
+
+    if detected:
         return {
             "type": "GÜVENLİK",
             "priority": "YÜKSEK",
             "confidence": 90,
             "detected_keywords": detected,
-            "suggestion": (
-                "Güvenlik riski tespit edildi. "
-                "Polis desteği değerlendirilmelidir."
-            ),
+            "suggestion": "Polis ekibi yönlendirilmesi önerilir.",
         }
 
-    # KAZA
-    if any(word in text for word in ACCIDENT_WORDS):
+    detected = []
+
+    for word in ACCIDENT_WORDS:
+        if word in text_lower:
+            detected.append(word)
+
+    if detected:
         return {
             "type": "KAZA",
             "priority": "YÜKSEK",
             "confidence": 88,
             "detected_keywords": detected,
-            "suggestion": (
-                "Kaza bildirimi tespit edildi. "
-                "Gerekli acil ekiplerin yönlendirilmesi önerilir."
-            ),
+            "suggestion": "Trafik/kaza müdahale ekibi yönlendirilmesi önerilir.",
         }
 
-    # DOĞAL AFET
-    if any(word in text for word in DISASTER_WORDS):
+    detected = []
+
+    for word in DISASTER_WORDS:
+        if word in text_lower:
+            detected.append(word)
+
+    if detected:
         return {
             "type": "DOĞAL AFET",
             "priority": "YÜKSEK",
             "confidence": 87,
             "detected_keywords": detected,
-            "suggestion": (
-                "Doğal afet ile ilgili bildirim tespit edildi."
-            ),
+            "suggestion": "Acil müdahale ve koordinasyon ekibi yönlendirilmesi önerilir.",
         }
 
-    # GENEL
     return {
         "type": "GENEL",
         "priority": "DÜŞÜK",
         "confidence": 60,
-        "detected_keywords": detected,
-        "suggestion": (
-            "Acil durum açıklaması analiz edildi."
-        ),
+        "detected_keywords": [],
+        "suggestion": "Olayın detaylı olarak değerlendirilmesi önerilir.",
     }
 
 
+def create_event_id():
+    return f"event-{int(datetime.now().timestamp() * 1000)}"
+
+
 # =========================================================
-# ROOT
+# ANA SAYFA / SAĞLIK KONTROLÜ
 # =========================================================
 
 @app.get("/")
 def root():
     return {
+        "success": True,
+        "message": "Acil Durum AI backend çalışıyor.",
         "status": "online",
-        "service": "Acil Durum AI",
-        "version": "1.0.0",
-        "emergency_count": len(emergencies),
+        "port": 8000,
+        "time": datetime.now().isoformat(),
     }
-
-
-# =========================================================
-# HEALTH
-# =========================================================
 
 @app.get("/health")
 def health():
     return {
-        "status": "healthy",
-        "backend": True,
-        "emergencies": len(emergencies),
-        "time": datetime.now().isoformat(),
+        "success": True,
+        "status": "online",
     }
 
-
 # =========================================================
-# AI ANALYZE
+# AI ANALİZ
 # =========================================================
 
 @app.post("/analyze")
-def analyze_emergency(request: AnalyzeRequest):
+def analyze(request: AnalyzeRequest):
+    result = analyze_text(request.message)
 
-    if not request.message.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Mesaj boş olamaz.",
-        )
-
-    return analyze_text(request.message)
+    return {
+        "success": True,
+        "analysis": result,
+    }
 
 
 # =========================================================
-# CREATE EMERGENCY
+# ACİL DURUM OLUŞTUR
 # =========================================================
 
 @app.post("/events")
-def create_emergency(data: EmergencyCreate):
+def create_event(data: EmergencyCreate):
+    event_id = create_event_id()
 
-    now = datetime.now().isoformat()
-
-    emergency_id = str(uuid4())[:8].upper()
-
-    location = data.location
-    analysis = data.analysis
-
-    emergency = {
-        "id": emergency_id,
-
+    event = {
+        "id": event_id,
         "service": data.service,
-
         "description": data.description,
-
-        "message": data.description,
-
-        "category": analysis.type,
-
-        "type": analysis.type,
-
-        "priority": analysis.priority,
-
-        "confidence": analysis.confidence,
-
-        "detected_keywords": analysis.detected_keywords,
-
-        "suggestion": analysis.suggestion,
-
-        "recommendation": analysis.suggestion,
-
-        "status": "Yeni",
-
-        "team": None,
-
-        "latitude": (
-            location.latitude
-            if location
-            else None
-        ),
-
-        "longitude": (
-            location.longitude
-            if location
-            else None
-        ),
-
-        "accuracy": (
-            location.accuracy
-            if location
-            else None
-        ),
-
         "location": (
-            {
-                "latitude": location.latitude,
-                "longitude": location.longitude,
-                "accuracy": location.accuracy,
-            }
-            if location
+            data.location.model_dump()
+            if data.location
             else None
         ),
-
-        "created_at": now,
-
-        "updated_at": now,
+        "analysis": data.analysis.model_dump(),
+        "status": "Yeni",
+        "team": None,
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
     }
 
-    emergencies.insert(0, emergency)
+    emergencies.append(event)
 
     return {
         "success": True,
         "message": "Acil durum başarıyla oluşturuldu.",
-        "event": emergency,
+        "event": event,
     }
 
 
 # =========================================================
-# GET EVENTS
-# TEAM APP BUNU KULLANIYOR
+# TÜM ACİL DURUMLAR
 # =========================================================
 
 @app.get("/events")
 def get_events():
-
     return {
         "success": True,
-        "count": len(emergencies),
         "events": emergencies,
+        "count": len(emergencies),
     }
 
 
 # =========================================================
-# GET SINGLE EVENT
+# TEK ACİL DURUM
 # =========================================================
 
 @app.get("/events/{event_id}")
 def get_event(event_id: str):
-
     for emergency in emergencies:
-
         if emergency["id"] == event_id:
-
             return {
                 "success": True,
                 "event": emergency,
@@ -410,40 +329,18 @@ def get_event(event_id: str):
 
 
 # =========================================================
-# UPDATE EVENT STATUS
-# TEAM APP BUNU KULLANIYOR
+# DURUM GÜNCELLE
 # =========================================================
 
 @app.patch("/events/{event_id}")
-def update_event(
+def update_event_status(
     event_id: str,
     data: StatusUpdate,
 ):
-
-    allowed_statuses = [
-        "Yeni",
-        "Ekip Atandı",
-        "Müdahale Ediliyor",
-        "Çözüldü",
-        "Tamamlandı",
-    ]
-
-    if data.status not in allowed_statuses:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Geçersiz durum.",
-        )
-
     for emergency in emergencies:
-
         if emergency["id"] == event_id:
-
             emergency["status"] = data.status
-
-            emergency["updated_at"] = (
-                datetime.now().isoformat()
-            )
+            emergency["updated_at"] = datetime.now().isoformat()
 
             return {
                 "success": True,
@@ -458,8 +355,7 @@ def update_event(
 
 
 # =========================================================
-# ASSIGN TEAM
-# TEAM APP BUNU KULLANIYOR
+# EKİP ATA
 # =========================================================
 
 @app.patch("/events/{event_id}/assign")
@@ -467,9 +363,7 @@ def assign_event_team(
     event_id: str,
     data: AssignTeamRequest,
 ):
-
     for emergency in emergencies:
-
         if emergency["id"] == event_id:
 
             team_name = (
@@ -483,9 +377,7 @@ def assign_event_team(
             if emergency["status"] == "Yeni":
                 emergency["status"] = "Ekip Atandı"
 
-            emergency["updated_at"] = (
-                datetime.now().isoformat()
-            )
+            emergency["updated_at"] = datetime.now().isoformat()
 
             return {
                 "success": True,
@@ -500,16 +392,13 @@ def assign_event_team(
 
 
 # =========================================================
-# DELETE EVENT
+# ACİL DURUM SİL
 # =========================================================
 
 @app.delete("/events/{event_id}")
 def delete_event(event_id: str):
-
     for index, emergency in enumerate(emergencies):
-
         if emergency["id"] == event_id:
-
             deleted = emergencies.pop(index)
 
             return {
@@ -525,75 +414,36 @@ def delete_event(event_id: str):
 
 
 # =========================================================
-# OLD ENDPOINT COMPATIBILITY
+# ESKİ / LEGACY ENDPOINTLER
 # =========================================================
 
 @app.get("/emergencies")
 def get_emergencies():
-
     return {
         "success": True,
-        "count": len(emergencies),
         "emergencies": emergencies,
+        "count": len(emergencies),
     }
+
+
+@app.post("/emergencies")
+def create_emergency(data: EmergencyCreate):
+    return create_event(data)
 
 
 @app.get("/emergencies/{emergency_id}")
 def get_emergency(emergency_id: str):
-
-    for emergency in emergencies:
-
-        if emergency["id"] == emergency_id:
-
-            return {
-                "success": True,
-                "emergency": emergency,
-            }
-
-    raise HTTPException(
-        status_code=404,
-        detail="Acil durum bulunamadı.",
-    )
+    return get_event(emergency_id)
 
 
-@app.patch("/emergencies/{emergency_id}/status")
-def update_status(
+@app.patch("/emergencies/{emergency_id}")
+def update_emergency(
     emergency_id: str,
     data: StatusUpdate,
 ):
-
-    return update_event(
-        emergency_id,
-        data,
-    )
-
-
-@app.patch("/emergencies/{emergency_id}/assign")
-def assign_team(emergency_id: str):
-
-    return assign_event_team(
-        emergency_id,
-        AssignTeamRequest(team=None),
-    )
+    return update_event_status(emergency_id, data)
 
 
 @app.delete("/emergencies/{emergency_id}")
 def delete_emergency(emergency_id: str):
-
     return delete_event(emergency_id)
-
-
-# =========================================================
-# START SERVER
-# =========================================================
-
-if __name__ == "__main__":
-
-    import uvicorn
-
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-    )

@@ -10,459 +10,561 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./TeamApp.css";
 
-const API_URL = "http://192.168.31.8:8000";
+const API_URL = "https://acil-durum-ai.onrender.com";
+
 const DEFAULT_CENTER = [41.0082, 28.9784];
-const TEAM_NAME = "Operasyon Ekibi";
+const TEAM_NAME = "OPERASYON EKİBİ";
 
-function createIcon(priority = "ORTA") {
-  const level =
-    priority === "KRİTİK"
-      ? "critical"
-      : priority === "YÜKSEK"
-      ? "high"
-      : "normal";
+const TEAMS = [
+  {
+    id: "ambulance-01",
+    name: "Ambulans Ekibi 01",
+    type: "SAĞLIK",
+    status: "Müsait",
+  },
+  {
+    id: "ambulance-02",
+    name: "Ambulans Ekibi 02",
+    type: "SAĞLIK",
+    status: "Müsait",
+  },
+  {
+    id: "police-01",
+    name: "Polis Ekibi 01",
+    type: "GÜVENLİK",
+    status: "Müsait",
+  },
+  {
+    id: "police-02",
+    name: "Polis Ekibi 02",
+    type: "GÜVENLİK",
+    status: "Müsait",
+  },
+  {
+    id: "fire-01",
+    name: "İtfaiye Ekibi 01",
+    type: "YANGIN",
+    status: "Müsait",
+  },
+  {
+    id: "fire-02",
+    name: "İtfaiye Ekibi 02",
+    type: "YANGIN",
+    status: "Müsait",
+  },
+  {
+    id: "operation-01",
+    name: "Operasyon Ekibi 01",
+    type: "GENEL",
+    status: "Müsait",
+  },
+];
 
-  return L.divIcon({
-    className: "incident-marker-wrapper",
-    html: `<div class="incident-marker ${level}"></div>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
+function normalizeEvent(event) {
+  return {
+    ...event,
+
+    id: event?.id ?? "",
+    service: event?.service ?? "GENEL",
+    category:
+      event?.category ??
+      event?.type ??
+      "GENEL",
+
+    priority:
+      event?.priority ??
+      "DÜŞÜK",
+
+    confidence:
+      Number(event?.confidence ?? 0),
+
+    description:
+      event?.description ??
+      event?.message ??
+      "Açıklama yok.",
+
+    recommendation:
+      event?.recommendation ??
+      event?.suggestion ??
+      "Öneri bulunmuyor.",
+
+    detected_keywords:
+      Array.isArray(event?.detected_keywords)
+        ? event.detected_keywords
+        : [],
+
+    latitude:
+      event?.latitude ??
+      event?.location?.latitude ??
+      null,
+
+    longitude:
+      event?.longitude ??
+      event?.location?.longitude ??
+      null,
+
+    accuracy:
+      event?.accuracy ??
+      event?.location?.accuracy ??
+      null,
+
+    status:
+      event?.status ??
+      "Yeni",
+
+    team:
+      event?.team ??
+      null,
+
+    created_at:
+      event?.created_at ??
+      null,
+
+    updated_at:
+      event?.updated_at ??
+      null,
+  };
+}
+
+function getPriorityClass(priority) {
+  if (priority === "KRİTİK") return "critical";
+  if (priority === "YÜKSEK") return "high";
+  return "normal";
+}
+
+function formatDate(date) {
+  if (!date) return "-";
+
+  const parsed = new Date(date);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return date;
+  }
+
+  return parsed.toLocaleString("tr-TR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
-function MapFocus({ emergency }) {
+function createMarkerIcon(priority, selected = false) {
+  const priorityClass =
+    getPriorityClass(priority);
+
+  return L.divIcon({
+    className: "custom-event-marker-wrapper",
+    html: `
+      <div class="custom-event-marker ${priorityClass} ${
+        selected ? "selected" : ""
+      }">
+        <span></span>
+      </div>
+    `,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15],
+  });
+}
+
+function MapFocus({ event }) {
   const map = useMap();
 
   useEffect(() => {
-    if (!emergency?.latitude || !emergency?.longitude) return;
-
-    map.flyTo(
-      [emergency.latitude, emergency.longitude],
-      15,
-      { duration: 0.8 }
-    );
-  }, [emergency, map]);
+    if (
+      event &&
+      event.latitude != null &&
+      event.longitude != null
+    ) {
+      map.flyTo(
+        [event.latitude, event.longitude],
+        14,
+        {
+          duration: 0.8,
+        }
+      );
+    }
+  }, [event, map]);
 
   return null;
 }
 
-function TeamApp() {
-  const [emergencies, setEmergencies] = useState([]);
-  const [selectedEmergency, setSelectedEmergency] = useState(null);
-  const [smsMessages, setSmsMessages] = useState([]);
-  const [selectedSMS, setSelectedSMS] = useState(null);
+export default function TeamApp() {
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] =
+    useState(null);
 
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [filter, setFilter] = useState("all");
-  const [search, setSearch] = useState("");
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [loading, setLoading] =
+    useState(true);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+  const [actionLoading, setActionLoading] =
+    useState(false);
 
-    return () => clearInterval(timer);
-  }, []);
+  const [backendOnline, setBackendOnline] =
+    useState(false);
 
-  const time = currentTime.toLocaleTimeString("tr-TR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const [activeFilter, setActiveFilter] =
+    useState("TÜMÜ");
 
-  const date = currentTime.toLocaleDateString("tr-TR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  const [search, setSearch] =
+    useState("");
 
-  const normalizeEvent = (event) => {
-    const analysis = event?.analysis || {};
+  const [teamModalOpen, setTeamModalOpen] =
+    useState(false);
 
-    const location =
-      event?.location ||
-      analysis?.location ||
-      {};
+  const [selectedTeam, setSelectedTeam] =
+    useState(null);
 
-    return {
-      ...event,
-      id: event?.id ?? event?._id ?? crypto.randomUUID(),
-      category:
-        event?.category ||
-        analysis?.category ||
-        event?.service ||
-        "Acil Durum",
-      priority:
-        event?.priority ||
-        analysis?.priority ||
-        "ORTA",
-      confidence:
-        event?.confidence ??
-        analysis?.confidence ??
-        0,
-      description:
-        event?.description ||
-        event?.message ||
-        "Açıklama bulunmuyor.",
-      recommendation:
-        event?.recommendation ||
-        analysis?.recommendation ||
-        "Ekip değerlendirmesi bekleniyor.",
-      detected_keywords:
-        event?.detected_keywords ||
-        analysis?.detected_keywords ||
-        [],
-      latitude:
-        Number(
-          event?.latitude ??
-          location?.latitude
-        ) || null,
-      longitude:
-        Number(
-          event?.longitude ??
-          location?.longitude
-        ) || null,
-      accuracy:
-        Number(
-          event?.accuracy ??
-          location?.accuracy
-        ) || null,
-      status: event?.status || "Yeni",
-      created_at:
-        event?.created_at ||
-        event?.createdAt ||
-        new Date().toISOString(),
-    };
-  };
-
-  const fetchEmergencies = async () => {
-    try {
-      const response = await fetch(`${API_URL}/events`);
-
-      if (!response.ok) {
-        throw new Error("Events endpoint hatası");
-      }
-
-      const data = await response.json();
-
-      const list = Array.isArray(data)
-        ? data
-        : data?.events || [];
-
-      const normalized = list
-        .map(normalizeEvent)
-        .sort(
-          (a, b) =>
-            new Date(b.created_at) -
-            new Date(a.created_at)
-        );
-
-      setEmergencies(normalized);
-
-      if (selectedEmergency) {
-        const updated = normalized.find(
-          (item) => item.id === selectedEmergency.id
-        );
-
-        if (updated) {
-          setSelectedEmergency(updated);
-        }
-      }
-    } catch (error) {
-      console.error("Olaylar alınamadı:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadSMSMessages = async () => {
+  async function fetchEvents() {
     try {
       const response = await fetch(
-        `${API_URL}/sms/test/history`
-      );
-
-      if (!response.ok) return;
-
-      const data = await response.json();
-
-      const list = Array.isArray(data)
-        ? data
-        : data?.messages || data?.sms || [];
-
-      const normalized = list
-        .map((sms, index) => ({
-          ...sms,
-          id:
-            sms?.id ||
-            `sms-${index}-${Date.now()}`,
-          sender:
-            sms?.sender ||
-            sms?.name ||
-            "Bilinmeyen Gönderici",
-          phone:
-            sms?.phone ||
-            sms?.sender_phone ||
-            "-",
-          message:
-            sms?.message ||
-            sms?.text ||
-            "",
-          service:
-            sms?.service ||
-            "112",
-          priority:
-            sms?.priority ||
-            "ORTA",
-          emergency:
-            sms?.emergency ?? false,
-          read:
-            sms?.read ?? false,
-          created_at:
-            sms?.created_at ||
-            new Date().toISOString(),
-        }))
-        .reverse();
-
-      setSmsMessages(normalized);
-
-      if (
-        selectedSMS &&
-        normalized.some(
-          (sms) => sms.id === selectedSMS.id
-        )
-      ) {
-        setSelectedSMS(
-          normalized.find(
-            (sms) => sms.id === selectedSMS.id
-          )
-        );
-      }
-    } catch (error) {
-      console.error("SMS alınamadı:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchEmergencies();
-    loadSMSMessages();
-
-    const eventTimer = setInterval(
-      fetchEmergencies,
-      3000
-    );
-
-    const smsTimer = setInterval(
-      loadSMSMessages,
-      3000
-    );
-
-    return () => {
-      clearInterval(eventTimer);
-      clearInterval(smsTimer);
-    };
-  }, []);
-
-  const stats = useMemo(() => {
-    const critical = emergencies.filter(
-      (e) => e.priority === "KRİTİK"
-    ).length;
-
-    const high = emergencies.filter(
-      (e) => e.priority === "YÜKSEK"
-    ).length;
-
-    const active = emergencies.filter(
-      (e) =>
-        e.status !== "Çözüldü" &&
-        e.status !== "Tamamlandı"
-    ).length;
-
-    const solved = emergencies.filter(
-      (e) =>
-        e.status === "Çözüldü" ||
-        e.status === "Tamamlandı"
-    ).length;
-
-    return {
-      total: emergencies.length,
-      critical,
-      high,
-      active,
-      solved,
-    };
-  }, [emergencies]);
-
-  const smsStats = useMemo(() => {
-    return {
-      total: smsMessages.length,
-      unread: smsMessages.filter(
-        (sms) => !sms.read
-      ).length,
-      emergency: smsMessages.filter(
-        (sms) => sms.emergency
-      ).length,
-    };
-  }, [smsMessages]);
-
-  const filteredEmergencies = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return emergencies.filter((event) => {
-      const priorityMatch =
-        filter === "all" ||
-        (filter === "critical" &&
-          event.priority === "KRİTİK") ||
-        (filter === "high" &&
-          event.priority === "YÜKSEK") ||
-        (filter === "active" &&
-          event.status !== "Çözüldü" &&
-          event.status !== "Tamamlandı");
-
-      if (!priorityMatch) return false;
-
-      if (!query) return true;
-
-      return [
-        event.description,
-        event.category,
-        event.status,
-        event.priority,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query);
-    });
-  }, [emergencies, filter, search]);
-
-  const openSMS = (sms) => {
-    setSelectedSMS({
-      ...sms,
-      read: true,
-    });
-
-    setSmsMessages((prev) =>
-      prev.map((item) =>
-        item.id === sms.id
-          ? { ...item, read: true }
-          : item
-      )
-    );
-  };
-
-  const selectEmergency = (emergency) => {
-    setSelectedEmergency(emergency);
-  };
-
-  const assignTeam = async (eventId) => {
-    setActionLoading(true);
-
-    try {
-      const response = await fetch(
-        `${API_URL}/events/${eventId}/assign`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            team: TEAM_NAME,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Ekip atanamadı");
-      }
-
-      await fetchEmergencies();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const updateStatus = async (
-    eventId,
-    status
-  ) => {
-    setActionLoading(true);
-
-    try {
-      const response = await fetch(
-        `${API_URL}/events/${eventId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status }),
-        }
+        `${API_URL}/events`
       );
 
       if (!response.ok) {
         throw new Error(
-          "Durum güncellenemedi"
+          `HTTP ${response.status}`
         );
       }
 
-      await fetchEmergencies();
+      const data = await response.json();
+
+      const incomingEvents =
+        Array.isArray(data)
+          ? data
+          : data?.events ?? [];
+
+      const normalized =
+        incomingEvents.map(normalizeEvent);
+
+      setEvents(normalized);
+      setBackendOnline(true);
+
+      setSelectedEvent((current) => {
+        if (!current) return null;
+
+        const updated = normalized.find(
+          (event) =>
+            event.id === current.id
+        );
+
+        return updated ?? current;
+      });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Olaylar alınamadı:",
+        error
+      );
+
+      setBackendOnline(false);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchEvents();
+
+    const timer = setInterval(
+      fetchEvents,
+      3000
+    );
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
+
+  const stats = useMemo(() => {
+    return {
+      total: events.length,
+
+      critical: events.filter(
+        (event) =>
+          event.priority === "KRİTİK"
+      ).length,
+
+      high: events.filter(
+        (event) =>
+          event.priority === "YÜKSEK"
+      ).length,
+
+      new: events.filter(
+        (event) =>
+          event.status === "Yeni"
+      ).length,
+
+      assigned: events.filter(
+        (event) =>
+          event.status ===
+          "Ekip Atandı"
+      ).length,
+
+      intervention: events.filter(
+        (event) =>
+          event.status ===
+          "Müdahale Ediliyor"
+      ).length,
+
+      resolved: events.filter(
+        (event) =>
+          event.status === "Çözüldü" ||
+          event.status ===
+            "Tamamlandı"
+      ).length,
+    };
+  }, [events]);
+
+  const filteredEvents = useMemo(() => {
+    let result = [...events];
+
+    if (activeFilter !== "TÜMÜ") {
+      result = result.filter(
+        (event) =>
+          event.priority === activeFilter
+      );
+    }
+
+    const query =
+      search.trim().toLowerCase();
+
+    if (query) {
+      result = result.filter((event) => {
+        const text = [
+          event.id,
+          event.description,
+          event.category,
+          event.service,
+          event.team,
+          event.status,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return text.includes(query);
+      });
+    }
+
+    return result;
+  }, [
+    events,
+    activeFilter,
+    search,
+  ]);
+
+  function selectEvent(event) {
+    setSelectedEvent(event);
+  }
+
+  function openTeamAssignment() {
+    if (!selectedEvent) return;
+
+    setSelectedTeam(null);
+    setTeamModalOpen(true);
+  }
+
+  async function assignTeam() {
+    if (
+      !selectedEvent ||
+      !selectedTeam
+    ) {
+      return;
+    }
+
+    setActionLoading(true);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/events/${selectedEvent.id}/assign`,
+        {
+          method: "PATCH",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            team: selectedTeam.name,
+          }),
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.detail ||
+            "Ekip atanamadı."
+        );
+      }
+
+      const updatedEvent =
+        normalizeEvent(
+          data?.event
+        );
+
+      setEvents((current) =>
+        current.map((event) =>
+          event.id === updatedEvent.id
+            ? updatedEvent
+            : event
+        )
+      );
+
+      setSelectedEvent(
+        updatedEvent
+      );
+
+      setTeamModalOpen(false);
+      setSelectedTeam(null);
+
+      await fetchEvents();
+    } catch (error) {
+      console.error(
+        "Ekip atama hatası:",
+        error
+      );
+
+      alert(
+        error?.message ||
+          "Ekip atanırken hata oluştu."
+      );
     } finally {
       setActionLoading(false);
     }
-  };
+  }
 
-  const formatTime = (value) => {
-    if (!value) return "--:--";
+  async function updateStatus(
+    newStatus
+  ) {
+    if (!selectedEvent) return;
 
-    const date = new Date(value);
+    setActionLoading(true);
 
-    if (Number.isNaN(date.getTime())) {
-      return "--:--";
+    try {
+      const response = await fetch(
+        `${API_URL}/events/${selectedEvent.id}`,
+        {
+          method: "PATCH",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            status: newStatus,
+          }),
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.detail ||
+            "Durum güncellenemedi."
+        );
+      }
+
+      const updatedEvent =
+        normalizeEvent(
+          data?.event
+        );
+
+      setEvents((current) =>
+        current.map((event) =>
+          event.id === updatedEvent.id
+            ? updatedEvent
+            : event
+        )
+      );
+
+      setSelectedEvent(
+        updatedEvent
+      );
+    } catch (error) {
+      console.error(
+        "Durum güncelleme hatası:",
+        error
+      );
+
+      alert(
+        error?.message ||
+          "Durum güncellenirken hata oluştu."
+      );
+    } finally {
+      setActionLoading(false);
     }
+  }
 
-    return date.toLocaleTimeString("tr-TR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  async function deleteEvent() {
+    if (!selectedEvent) return;
 
-  const getPriorityClass = (priority) => {
-    if (priority === "KRİTİK") return "critical";
-    if (priority === "YÜKSEK") return "high";
-    return "medium";
-  };
+    const confirmed =
+      window.confirm(
+        "Bu olayı silmek istediğine emin misin?"
+      );
 
-  const getStatusClass = (status) => {
-    if (
-      status === "Çözüldü" ||
-      status === "Tamamlandı"
-    ) {
-      return "solved";
+    if (!confirmed) return;
+
+    setActionLoading(true);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/events/${selectedEvent.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.detail ||
+            "Olay silinemedi."
+        );
+      }
+
+      setEvents((current) =>
+        current.filter(
+          (event) =>
+            event.id !==
+            selectedEvent.id
+        )
+      );
+
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error(
+        "Olay silme hatası:",
+        error
+      );
+
+      alert(
+        error?.message ||
+          "Olay silinirken hata oluştu."
+      );
+    } finally {
+      setActionLoading(false);
     }
-
-    if (status === "Müdahale Ediliyor") {
-      return "working";
-    }
-
-    if (status === "Ekip Atandı") {
-      return "assigned";
-    }
-
-    return "new";
-  };
+  }
 
   return (
-    <div className="operations-app">
-
-      <header className="operations-header">
-        <div className="brand-block">
-          <div className="brand-mark">AI</div>
+    <div className="team-app">
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-mark">
+            AI
+          </div>
 
           <div>
             <div className="brand-title">
@@ -470,595 +572,738 @@ function TeamApp() {
             </div>
 
             <div className="brand-subtitle">
-              ULUSAL OPERASYON KONSOLU
+              OPERASYON MERKEZİ
             </div>
           </div>
         </div>
 
-        <div className="header-center">
-          <div className="live-indicator">
-            <span />
-            CANLI SİSTEM
+        <div className="topbar-center">
+          <div className="system-name">
+            {TEAM_NAME}
           </div>
 
-          <div className="header-clock">
-            {time}
-          </div>
-
-          <div className="header-date">
-            {date}
-          </div>
-        </div>
-
-        <div className="header-actions">
-          <div className="system-status">
-            <span className="status-dot" />
-            <div>
-              <strong>SİSTEM AKTİF</strong>
-              <small>Backend bağlantısı</small>
-            </div>
-          </div>
-
-          <button
-            className="refresh-button"
-            onClick={() => {
-              fetchEmergencies();
-              loadSMSMessages();
-            }}
+          <div
+            className={`connection-status ${
+              backendOnline
+                ? "online"
+                : "offline"
+            }`}
           >
-            YENİLE
-          </button>
+            <span className="connection-dot" />
+            {backendOnline
+              ? "SİSTEM AKTİF"
+              : "BAĞLANTI YOK"}
+          </div>
+        </div>
+
+        <div className="topbar-right">
+          <div className="clock">
+            {new Date().toLocaleTimeString(
+              "tr-TR",
+              {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              }
+            )}
+          </div>
         </div>
       </header>
 
-      <main className="operations-main">
-
-        <aside className="left-sidebar">
-
-          <div className="panel-title">
-            <span>OPERASYON DURUMU</span>
-            <span className="panel-code">
-              OPS-01
-            </span>
-          </div>
-
-          <div className="stat-list">
-
-            <div className="stat-item">
-              <span>TOPLAM OLAY</span>
-              <strong>{stats.total}</strong>
+      <main className="workspace">
+        <aside className="left-panel">
+          <section className="panel-section">
+            <div className="section-title">
+              OPERASYON
             </div>
 
-            <div className="stat-item critical-stat">
-              <span>KRİTİK</span>
-              <strong>{stats.critical}</strong>
+            <div className="stat-main">
+              <span>AKTİF OLAY</span>
+              <strong>
+                {stats.total}
+              </strong>
             </div>
 
-            <div className="stat-item high-stat">
-              <span>YÜKSEK ÖNCELİK</span>
-              <strong>{stats.high}</strong>
+            <div className="stat-grid">
+              <button
+                className={`mini-stat critical ${
+                  activeFilter ===
+                  "KRİTİK"
+                    ? "active"
+                    : ""
+                }`}
+                onClick={() =>
+                  setActiveFilter(
+                    activeFilter ===
+                      "KRİTİK"
+                      ? "TÜMÜ"
+                      : "KRİTİK"
+                  )
+                }
+              >
+                <span>KRİTİK</span>
+                <strong>
+                  {stats.critical}
+                </strong>
+              </button>
+
+              <button
+                className={`mini-stat high ${
+                  activeFilter ===
+                  "YÜKSEK"
+                    ? "active"
+                    : ""
+                }`}
+                onClick={() =>
+                  setActiveFilter(
+                    activeFilter ===
+                      "YÜKSEK"
+                      ? "TÜMÜ"
+                      : "YÜKSEK"
+                  )
+                }
+              >
+                <span>YÜKSEK</span>
+                <strong>
+                  {stats.high}
+                </strong>
+              </button>
+
+              <button
+                className="mini-stat"
+                onClick={() =>
+                  setActiveFilter(
+                    activeFilter === "TÜMÜ"
+                      ? "DÜŞÜK"
+                      : "TÜMÜ"
+                  )
+                }
+              >
+                <span>YENİ</span>
+                <strong>
+                  {stats.new}
+                </strong>
+              </button>
+
+              <div className="mini-stat">
+                <span>ATANAN</span>
+                <strong>
+                  {stats.assigned}
+                </strong>
+              </div>
+            </div>
+          </section>
+
+          <section className="panel-section">
+            <div className="section-title">
+              FİLTRE
             </div>
 
-            <div className="stat-item">
-              <span>AKTİF MÜDAHALE</span>
-              <strong>{stats.active}</strong>
+            <div className="filter-list">
+              {[
+                "TÜMÜ",
+                "KRİTİK",
+                "YÜKSEK",
+                "DÜŞÜK",
+              ].map((filter) => (
+                <button
+                  key={filter}
+                  className={`filter-button ${
+                    activeFilter === filter
+                      ? "active"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setActiveFilter(
+                      filter
+                    )
+                  }
+                >
+                  <span>
+                    {filter}
+                  </span>
+
+                  <span>
+                    {filter === "TÜMÜ"
+                      ? stats.total
+                      : filter ===
+                        "KRİTİK"
+                      ? stats.critical
+                      : filter ===
+                        "YÜKSEK"
+                      ? stats.high
+                      : events.filter(
+                          (event) =>
+                            event.priority ===
+                            "DÜŞÜK"
+                        ).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="panel-section">
+            <div className="section-title">
+              DURUM
             </div>
 
-            <div className="stat-item">
-              <span>TAMAMLANAN</span>
-              <strong>{stats.solved}</strong>
+            <div className="status-line">
+              <span>Yeni</span>
+              <strong>
+                {stats.new}
+              </strong>
             </div>
 
-          </div>
-
-          <div className="sidebar-section">
-
-            <div className="section-label">
-              OLAY FİLTRESİ
+            <div className="status-line">
+              <span>Ekip Atandı</span>
+              <strong>
+                {stats.assigned}
+              </strong>
             </div>
 
-            <button
-              className={
-                filter === "all"
-                  ? "filter-button active"
-                  : "filter-button"
-              }
-              onClick={() => setFilter("all")}
-            >
-              TÜM OLAYLAR
-              <span>{stats.total}</span>
-            </button>
+            <div className="status-line">
+              <span>Müdahale</span>
+              <strong>
+                {stats.intervention}
+              </strong>
+            </div>
 
-            <button
-              className={
-                filter === "critical"
-                  ? "filter-button active critical-filter"
-                  : "filter-button"
-              }
-              onClick={() =>
-                setFilter("critical")
-              }
-            >
-              KRİTİK
-              <span>{stats.critical}</span>
-            </button>
+            <div className="status-line">
+              <span>Çözüldü</span>
+              <strong>
+                {stats.resolved}
+              </strong>
+            </div>
+          </section>
 
-            <button
-              className={
-                filter === "high"
-                  ? "filter-button active high-filter"
-                  : "filter-button"
-              }
-              onClick={() =>
-                setFilter("high")
-              }
-            >
-              YÜKSEK
-              <span>{stats.high}</span>
-            </button>
-
-            <button
-              className={
-                filter === "active"
-                  ? "filter-button active"
-                  : "filter-button"
-              }
-              onClick={() =>
-                setFilter("active")
-              }
-            >
-              AKTİF
-              <span>{stats.active}</span>
-            </button>
-
-          </div>
-
-          <div className="sidebar-section">
-
-            <div className="section-label">
-              ARAMA
+          <section className="panel-section search-section">
+            <div className="section-title">
+              OLAY ARA
             </div>
 
             <input
               className="search-input"
-              placeholder="Olay ara..."
               value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
+              onChange={(event) =>
+                setSearch(
+                  event.target.value
+                )
               }
+              placeholder="ID, açıklama, ekip..."
             />
-
-          </div>
-
-          <div className="team-status-box">
-            <div className="team-status-header">
-              <span className="status-dot" />
-              EKİP DURUMU
-            </div>
-
-            <strong>{TEAM_NAME}</strong>
-
-            <small>
-              Operasyon merkezi aktif
-            </small>
-          </div>
-
+          </section>
         </aside>
 
-        <section className="map-panel">
-
-          <div className="map-header">
+        <section className="map-section">
+          <div className="map-toolbar">
             <div>
-              <span className="map-kicker">
-                GERÇEK ZAMANLI HARİTA
-              </span>
+              <strong>
+                İSTANBUL CANLI HARİTA
+              </strong>
 
-              <h2>
-                İSTANBUL OPERASYON HARİTASI
-              </h2>
+              <span>
+                {filteredEvents.length} olay
+              </span>
             </div>
 
-            <div className="map-legend">
-              <span>
-                <i className="legend critical" />
-                Kritik
-              </span>
-
-              <span>
-                <i className="legend high" />
-                Yüksek
-              </span>
-
-              <span>
-                <i className="legend normal" />
-                Normal
-              </span>
+            <div className="map-live">
+              <span className="live-dot" />
+              CANLI
             </div>
           </div>
 
-          <div className="map-container">
+          <MapContainer
+            center={DEFAULT_CENTER}
+            zoom={11}
+            className="main-map"
+          >
+            <TileLayer
+              attribution='&copy; OpenStreetMap contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
 
-            <MapContainer
-              center={DEFAULT_CENTER}
-              zoom={11}
-              scrollWheelZoom
-              className="operations-map"
-            >
+            <MapFocus
+              event={selectedEvent}
+            />
 
-              <TileLayer
-                attribution="&copy; OpenStreetMap"
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+            {filteredEvents.map(
+              (event) => {
+                if (
+                  event.latitude ==
+                    null ||
+                  event.longitude ==
+                    null
+                ) {
+                  return null;
+                }
 
-              <MapFocus
-                emergency={selectedEmergency}
-              />
+                const isSelected =
+                  selectedEvent?.id ===
+                  event.id;
 
-              {emergencies
-                .filter(
-                  (event) =>
-                    event.latitude &&
-                    event.longitude
-                )
-                .map((event) => (
+                return (
                   <Marker
                     key={event.id}
                     position={[
                       event.latitude,
                       event.longitude,
                     ]}
-                    icon={createIcon(
-                      event.priority
+                    icon={createMarkerIcon(
+                      event.priority,
+                      isSelected
                     )}
                     eventHandlers={{
                       click: () =>
-                        selectEmergency(event),
+                        selectEvent(
+                          event
+                        ),
                     }}
                   >
                     <Popup>
-                      <strong>
-                        {event.category}
-                      </strong>
+                      <div className="popup-content">
+                        <strong>
+                          {event.category}
+                        </strong>
 
-                      <br />
+                        <div>
+                          {event.description}
+                        </div>
 
-                      {event.description}
-
-                      <br />
-
-                      Öncelik:{" "}
-                      {event.priority}
+                        <small>
+                          {event.id}
+                        </small>
+                      </div>
                     </Popup>
                   </Marker>
-                ))}
-            </MapContainer>
+                );
+              }
+            )}
+          </MapContainer>
 
-            <div className="map-overlay">
-              <span>GPS</span>
-              <strong>
-                {emergencies.filter(
-                  (e) =>
-                    e.latitude &&
-                    e.longitude
-                ).length}{" "}
-                KONUM
-              </strong>
+          <div className="map-legend">
+            <div>
+              <span className="legend-dot critical" />
+              KRİTİK
             </div>
 
+            <div>
+              <span className="legend-dot high" />
+              YÜKSEK
+            </div>
+
+            <div>
+              <span className="legend-dot normal" />
+              NORMAL
+            </div>
           </div>
 
-        </section>
-
-        <aside className="right-sidebar">
-
-          <div className="right-panel">
-
-            <div className="right-panel-header">
-              <div>
-                <span>AKTİF OLAYLAR</span>
-                <small>
-                  Son güncellemeler
-                </small>
-              </div>
-
-              <strong>
-                {filteredEmergencies.length}
-              </strong>
+          <div className="map-info">
+            <div>
+              LAT:{" "}
+              {selectedEvent?.latitude
+                ?.toFixed(5) ?? "-"}
             </div>
 
-            <div className="incident-feed">
+            <div>
+              LNG:{" "}
+              {selectedEvent?.longitude
+                ?.toFixed(5) ?? "-"}
+            </div>
+          </div>
+        </section>
 
-              {loading ? (
-                <div className="empty-state">
-                  Olaylar yükleniyor...
-                </div>
-              ) : filteredEmergencies.length ===
-                0 ? (
-                <div className="empty-state">
-                  Gösterilecek olay yok.
-                </div>
-              ) : (
-                filteredEmergencies
-                  .slice(0, 12)
-                  .map((event) => (
+        <aside className="right-panel">
+          <div className="events-header">
+            <div>
+              <div className="section-title">
+                AKTİF OLAYLAR
+              </div>
+
+              <div className="events-count">
+                {filteredEvents.length} olay
+              </div>
+            </div>
+          </div>
+
+          <div className="events-list">
+            {loading ? (
+              <div className="empty-state">
+                Olaylar yükleniyor...
+              </div>
+            ) : filteredEvents.length ===
+              0 ? (
+              <div className="empty-state">
+                Aktif olay bulunmuyor.
+              </div>
+            ) : (
+              filteredEvents.map(
+                (event) => {
+                  const priorityClass =
+                    getPriorityClass(
+                      event.priority
+                    );
+
+                  const selected =
+                    selectedEvent?.id ===
+                    event.id;
+
+                  return (
                     <button
                       key={event.id}
-                      className={
-                        selectedEmergency?.id ===
-                        event.id
-                          ? "incident-card selected"
-                          : "incident-card"
-                      }
+                      className={`event-card ${priorityClass} ${
+                        selected
+                          ? "selected"
+                          : ""
+                      }`}
                       onClick={() =>
-                        selectEmergency(event)
+                        selectEvent(
+                          event
+                        )
                       }
                     >
-                      <div className="incident-card-top">
-                        <span
-                          className={`priority-badge ${getPriorityClass(
-                            event.priority
-                          )}`}
-                        >
-                          {event.priority}
-                        </span>
+                      <div className="event-card-top">
+                        <div className="event-priority">
+                          <span
+                            className={`priority-dot ${priorityClass}`}
+                          />
 
-                        <span className="incident-time">
-                          {formatTime(
+                          {event.priority}
+                        </div>
+
+                        <div className="event-time">
+                          {formatDate(
                             event.created_at
                           )}
-                        </span>
+                        </div>
                       </div>
 
-                      <strong>
+                      <div className="event-card-title">
                         {event.category}
-                      </strong>
+                      </div>
 
-                      <p>
+                      <div className="event-card-description">
                         {event.description}
-                      </p>
+                      </div>
 
-                      <div className="incident-bottom">
+                      <div className="event-card-bottom">
+                        <span>
+                          {event.id}
+                        </span>
+
                         <span>
                           {event.status}
                         </span>
-
-                        <span>
-                          %{Math.round(
-                            Number(
-                              event.confidence
-                            ) > 1
-                              ? event.confidence
-                              : event.confidence *
-                                  100
-                          )}
-                        </span>
-                      </div>
-                    </button>
-                  ))
-              )}
-
-            </div>
-
-          </div>
-
-          <div className="right-panel sms-panel">
-
-            <div className="right-panel-header">
-
-              <div>
-                <span>SMS MERKEZİ</span>
-                <small>
-                  Gelen bildirimler
-                </small>
-              </div>
-
-              <strong>
-                {smsStats.unread}
-              </strong>
-
-            </div>
-
-            <div className="sms-summary">
-              <div>
-                <span>TOPLAM</span>
-                <strong>
-                  {smsStats.total}
-                </strong>
-              </div>
-
-              <div>
-                <span>ACİL</span>
-                <strong>
-                  {smsStats.emergency}
-                </strong>
-              </div>
-            </div>
-
-            <div className="sms-list">
-
-              {smsMessages.length === 0 ? (
-                <div className="empty-state">
-                  Yeni SMS bulunmuyor.
-                </div>
-              ) : (
-                smsMessages
-                  .slice(0, 6)
-                  .map((sms) => (
-                    <button
-                      key={sms.id}
-                      className={
-                        selectedSMS?.id ===
-                        sms.id
-                          ? "sms-item selected"
-                          : "sms-item"
-                      }
-                      onClick={() =>
-                        openSMS(sms)
-                      }
-                    >
-                      <div>
-                        <strong>
-                          {sms.sender}
-                        </strong>
-
-                        {!sms.read && (
-                          <span className="unread-dot" />
-                        )}
                       </div>
 
-                      <p>
-                        {sms.message}
-                      </p>
-
-                      <small>
-                        {formatTime(
-                          sms.created_at
-                        )}
-                      </small>
+                      {event.team && (
+                        <div className="event-team">
+                          EKİP:{" "}
+                          {event.team}
+                        </div>
+                      )}
                     </button>
-                  ))
-              )}
-
-            </div>
-
+                  );
+                }
+              )
+            )}
           </div>
-
         </aside>
-
       </main>
 
-      {selectedEmergency && (
-        <section className="incident-detail">
-
-          <div className="detail-main">
-
+      {teamModalOpen &&
+        selectedEvent && (
+          <div
+            className="team-modal-overlay"
+            onClick={() =>
+              !actionLoading &&
+              setTeamModalOpen(false)
+            }
+          >
             <div
-              className={`detail-priority ${getPriorityClass(
-                selectedEmergency.priority
-              )}`}
-            >
-              {selectedEmergency.priority}
-            </div>
-
-            <div className="detail-title">
-
-              <span>
-                {selectedEmergency.category}
-              </span>
-
-              <h2>
-                {selectedEmergency.description}
-              </h2>
-
-              <small>
-                Olay ID:{" "}
-                {selectedEmergency.id}
-              </small>
-
-            </div>
-
-          </div>
-
-          <div className="detail-meta">
-
-            <div>
-              <span>DURUM</span>
-              <strong>
-                {selectedEmergency.status}
-              </strong>
-            </div>
-
-            <div>
-              <span>GÜVEN</span>
-              <strong>
-                %
-                {Math.round(
-                  Number(
-                    selectedEmergency.confidence
-                  ) > 1
-                    ? selectedEmergency.confidence
-                    : selectedEmergency.confidence *
-                        100
-                )}
-              </strong>
-            </div>
-
-            <div>
-              <span>KONUM</span>
-              <strong>
-                {selectedEmergency.latitude
-                  ? `${selectedEmergency.latitude.toFixed(
-                      4
-                    )}, ${selectedEmergency.longitude.toFixed(
-                      4
-                    )}`
-                  : "Yok"}
-              </strong>
-            </div>
-
-          </div>
-
-          <div className="detail-actions">
-
-            <button
-              className="action-button assign"
-              disabled={actionLoading}
-              onClick={() =>
-                assignTeam(
-                  selectedEmergency.id
-                )
+              className="team-modal"
+              onClick={(event) =>
+                event.stopPropagation()
               }
             >
-              EKİP ATA
-            </button>
+              <div className="team-modal-header">
+                <div>
+                  <div className="section-title">
+                    EKİP ATA
+                  </div>
 
-            <button
-              className="action-button working"
-              disabled={actionLoading}
-              onClick={() =>
-                updateStatus(
-                  selectedEmergency.id,
-                  "Müdahale Ediliyor"
-                )
-              }
-            >
-              MÜDAHALE BAŞLAT
-            </button>
+                  <h2>
+                    Müdahale ekibi seç
+                  </h2>
+                </div>
 
-            <button
-              className="action-button solve"
-              disabled={actionLoading}
-              onClick={() =>
-                updateStatus(
-                  selectedEmergency.id,
-                  "Çözüldü"
-                )
-              }
-            >
-              OLAYI ÇÖZ
-            </button>
+                <button
+                  className="modal-close"
+                  onClick={() =>
+                    setTeamModalOpen(false)
+                  }
+                  disabled={actionLoading}
+                >
+                  ×
+                </button>
+              </div>
 
+              <div className="team-modal-event">
+                <div>
+                  <span>OLAY</span>
+                  <strong>
+                    {selectedEvent.id}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>KATEGORİ</span>
+                  <strong>
+                    {
+                      selectedEvent.category
+                    }
+                  </strong>
+                </div>
+
+                <div>
+                  <span>ÖNCELİK</span>
+                  <strong>
+                    {
+                      selectedEvent.priority
+                    }
+                  </strong>
+                </div>
+              </div>
+
+              <div className="team-list">
+                {TEAMS.map((team) => {
+                  const selected =
+                    selectedTeam?.id ===
+                    team.id;
+
+                  return (
+                    <button
+                      key={team.id}
+                      className={`team-option ${
+                        selected
+                          ? "selected"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        setSelectedTeam(
+                          team
+                        )
+                      }
+                      disabled={
+                        actionLoading
+                      }
+                    >
+                      <div className="team-option-main">
+                        <strong>
+                          {team.name}
+                        </strong>
+
+                        <span>
+                          {team.type}
+                        </span>
+                      </div>
+
+                      <div className="team-option-status">
+                        <span className="available-dot" />
+                        {team.status}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="team-modal-footer">
+                <button
+                  className="modal-cancel"
+                  onClick={() =>
+                    setTeamModalOpen(false)
+                  }
+                  disabled={actionLoading}
+                >
+                  İPTAL
+                </button>
+
+                <button
+                  className="team-confirm"
+                  onClick={assignTeam}
+                  disabled={
+                    !selectedTeam ||
+                    actionLoading
+                  }
+                >
+                  {actionLoading
+                    ? "ATANIYOR..."
+                    : "EKİBİ ATA"}
+                </button>
+              </div>
+            </div>
           </div>
+        )}
 
-        </section>
-      )}
+      <section className="command-bar">
+        {selectedEvent ? (
+          <>
+            <div className="command-main">
+              <div className="command-id">
+                <span>SEÇİLİ OLAY</span>
 
-      <footer className="operations-footer">
-        <span>
-          ACİL DURUM AI OPERASYON MERKEZİ
-        </span>
+                <strong>
+                  {selectedEvent.id}
+                </strong>
+              </div>
 
-        <span>
-          Sistem zamanı: {time}
-        </span>
+              <div className="command-priority">
+                <span
+                  className={`priority-indicator ${getPriorityClass(
+                    selectedEvent.priority
+                  )}`}
+                />
 
-        <span>
-          {TEAM_NAME}
-        </span>
-      </footer>
+                <strong>
+                  {selectedEvent.priority}
+                </strong>
+              </div>
 
+              <div className="command-category">
+                {selectedEvent.category}
+              </div>
+
+              <div className="command-description">
+                {selectedEvent.description}
+              </div>
+            </div>
+
+            <div className="command-intelligence">
+              <div>
+                <span>
+                  AI ÖNERİSİ
+                </span>
+
+                <strong>
+                  {
+                    selectedEvent.recommendation
+                  }
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  ANAHTAR KELİMELER
+                </span>
+
+                <strong>
+                  {selectedEvent
+                    .detected_keywords
+                    .length > 0
+                    ? selectedEvent.detected_keywords.join(
+                        ", "
+                      )
+                    : "-"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="command-meta">
+              <div>
+                <span>DURUM</span>
+                <strong>
+                  {selectedEvent.status}
+                </strong>
+              </div>
+
+              <div>
+                <span>EKİP</span>
+                <strong>
+                  {selectedEvent.team ||
+                    "Atanmadı"}
+                </strong>
+              </div>
+
+              <div>
+                <span>GÜVEN</span>
+                <strong>
+                  %
+                  {
+                    selectedEvent.confidence
+                  }
+                </strong>
+              </div>
+            </div>
+
+            <div className="command-actions">
+              <button
+                className="command-btn assign"
+                disabled={
+                  actionLoading ||
+                  selectedEvent.status ===
+                    "Çözüldü" ||
+                  selectedEvent.status ===
+                    "Tamamlandı"
+                }
+                onClick={
+                  openTeamAssignment
+                }
+              >
+                EKİP ATA
+              </button>
+
+              <button
+                className="command-btn start"
+                disabled={
+                  actionLoading ||
+                  selectedEvent.status ===
+                    "Çözüldü" ||
+                  selectedEvent.status ===
+                    "Tamamlandı"
+                }
+                onClick={() =>
+                  updateStatus(
+                    "Müdahale Ediliyor"
+                  )
+                }
+              >
+                MÜDAHALE BAŞLAT
+              </button>
+
+              <button
+                className="command-btn resolve"
+                disabled={
+                  actionLoading ||
+                  selectedEvent.status ===
+                    "Çözüldü" ||
+                  selectedEvent.status ===
+                    "Tamamlandı"
+                }
+                onClick={() =>
+                  updateStatus(
+                    "Çözüldü"
+                  )
+                }
+              >
+                ÇÖZÜLDÜ
+              </button>
+
+              <button
+                className="command-btn delete"
+                disabled={actionLoading}
+                onClick={deleteEvent}
+              >
+                SİL
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="no-selection">
+            Haritadan veya olay listesinden
+            bir olay seçin.
+          </div>
+        )}
+      </section>
     </div>
   );
 }
-
-export default TeamApp;
